@@ -1,6 +1,6 @@
 # Coolpack
 
-> **Note**: Keep this file updated when making changes to detection logic, adding providers, or modifying the project structure.
+> **Note**: Keep this file and `README.md` updated when making changes to detection logic, adding providers, adding CLI flags, or modifying the project structure.
 
 A general purpose build pack for applications. Detects application type, generates Dockerfiles, and builds container images.
 
