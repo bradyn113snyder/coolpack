@@ -21,8 +21,8 @@ jobs:
             goos: linux
             goarch: arm64
             cc: gcc
-          # macOS builds
-          - os: macos-13
+          # macOS builds (both on ARM runner with cross-compile for amd64)
+          - os: macos-latest
             goos: darwin
             goarch: amd64
             cc: clang
@@ -30,11 +30,6 @@ jobs:
             goos: darwin
             goarch: arm64
             cc: clang
-          # Windows build
-          - os: windows-latest
-            goos: windows
-            goarch: amd64
-            cc: gcc
 
     runs-on: ${{ matrix.os }}
     steps:
@@ -71,28 +66,14 @@ jobs:
           LDFLAGS="$LDFLAGS -X github.com/coollabsio/coolpack/pkg/version.Date=$DATE"
 
           OUTPUT="coolpack_${{ matrix.goos }}_${{ matrix.goarch }}"
-          if [ "${{ matrix.goos }}" = "windows" ]; then
-            OUTPUT="${OUTPUT}.exe"
-          fi
 
           go build -ldflags "$LDFLAGS" -o "$OUTPUT" .
 
-      - name: Create archive (Unix)
-        if: matrix.goos != 'windows'
-        shell: bash
+      - name: Create archive
         run: |
           VERSION=${{ steps.version.outputs.VERSION }}
           ARCHIVE="coolpack_${VERSION}_${{ matrix.goos }}_${{ matrix.goarch }}.tar.gz"
           tar -czvf "$ARCHIVE" "coolpack_${{ matrix.goos }}_${{ matrix.goarch }}"
-          echo "ARCHIVE=$ARCHIVE" >> $GITHUB_ENV
-
-      - name: Create archive (Windows)
-        if: matrix.goos == 'windows'
-        shell: bash
-        run: |
-          VERSION=${{ steps.version.outputs.VERSION }}
-          ARCHIVE="coolpack_${VERSION}_${{ matrix.goos }}_${{ matrix.goarch }}.zip"
-          zip "$ARCHIVE" "coolpack_${{ matrix.goos }}_${{ matrix.goarch }}.exe"
           echo "ARCHIVE=$ARCHIVE" >> $GITHUB_ENV
 
       - name: Upload release asset
