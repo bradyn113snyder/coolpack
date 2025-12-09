@@ -1,11 +1,13 @@
 package coolpack
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 
+	"github.com/coollabsio/coolpack/pkg/app"
 	"github.com/coollabsio/coolpack/pkg/detector"
 	"github.com/coollabsio/coolpack/pkg/generator"
 	"github.com/spf13/cobra"
@@ -21,6 +23,8 @@ var (
 	prepareOutputDir    string
 	prepareSPA          bool
 	prepareNoSPA        bool
+	preparePackages     []string
+	preparePlanFile     string
 )
 
 var prepareCmd = &cobra.Command{
@@ -30,6 +34,9 @@ var prepareCmd = &cobra.Command{
 detect the language, framework, and package manager, then generate
 a Dockerfile and related build files in the .coolpack directory.
 
+If a coolpack.json file exists in the project root, it will be used
+instead of running detection. Use --plan to specify a different file.
+
 Environment Variables:
   COOLPACK_INSTALL_CMD     Override install command
   COOLPACK_BUILD_CMD       Override build command
@@ -38,7 +45,8 @@ Environment Variables:
   COOLPACK_NODE_VERSION    Override Node.js version
   COOLPACK_STATIC_SERVER   Static file server: caddy (default), nginx
   COOLPACK_SPA_OUTPUT_DIR  Override static output directory (e.g., dist, build)
-  COOLPACK_SPA             Enable SPA mode (serves index.html for all routes)`,
+  COOLPACK_SPA             Enable SPA mode (serves index.html for all routes)
+  COOLPACK_PACKAGES        Additional APT packages (comma-separated)`,
 	Args: cobra.MaximumNArgs(1),
 	RunE: runPrepare,
 }
@@ -53,6 +61,8 @@ func init() {
 	prepareCmd.Flags().StringVar(&prepareOutputDir, "output-dir", "", "Override static output directory (e.g., dist, build, out)")
 	prepareCmd.Flags().BoolVar(&prepareSPA, "spa", false, "Enable SPA mode (serves index.html for all routes)")
 	prepareCmd.Flags().BoolVar(&prepareNoSPA, "no-spa", false, "Disable SPA mode (overrides auto-detection)")
+	prepareCmd.Flags().StringArrayVar(&preparePackages, "packages", nil, "Additional APT packages to install (e.g., curl, wget)")
+	prepareCmd.Flags().StringVar(&preparePlanFile, "plan", "", "Use plan file instead of detection (e.g., coolpack.json)")
 }
 
 func runPrepare(cmd *cobra.Command, args []string) error {
@@ -76,15 +86,37 @@ func runPrepare(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("path does not exist: %s", absPath)
 	}
 
-	// Run detection
-	d := detector.New(absPath)
-	plan, err := d.Detect()
-	if err != nil {
-		return fmt.Errorf("detection failed: %w", err)
+	var plan *app.Plan
+
+	// Check for plan file: --plan flag > coolpack.json in project root
+	planFile := preparePlanFile
+	if planFile == "" {
+		defaultPlanFile := filepath.Join(absPath, "coolpack.json")
+		if _, err := os.Stat(defaultPlanFile); err == nil {
+			planFile = defaultPlanFile
+		}
 	}
 
-	if plan == nil {
-		return fmt.Errorf("no supported application detected")
+	if planFile != "" {
+		// Load plan from file
+		fmt.Printf("Using plan file: %s\n", planFile)
+		var err error
+		plan, err = prepareLoadPlanFromFile(planFile)
+		if err != nil {
+			return fmt.Errorf("failed to load plan file: %w", err)
+		}
+	} else {
+		// Run detection
+		d := detector.New(absPath)
+		var err error
+		plan, err = d.Detect()
+		if err != nil {
+			return fmt.Errorf("detection failed: %w", err)
+		}
+
+		if plan == nil {
+			return fmt.Errorf("no supported application detected")
+		}
 	}
 
 	// Apply command overrides (CLI > env > detected)
@@ -98,6 +130,9 @@ func runPrepare(cmd *cobra.Command, args []string) error {
 
 	// Apply output directory override (CLI > env > framework default)
 	prepareApplyOutputDirSetting(plan, prepareOutputDir)
+
+	// Apply custom packages (CLI > env > detected)
+	prepareApplyCustomPackages(plan, preparePackages)
 
 	// Parse build environment variables
 	envMap := prepareParseEnvVars(prepareBuildEnvs)
@@ -224,4 +259,69 @@ func prepareApplyOutputDirSetting(plan *detector.Plan, outputDir string) {
 	} else if env := os.Getenv("COOLPACK_SPA_OUTPUT_DIR"); env != "" {
 		plan.Metadata["output_dir_override"] = env
 	}
+}
+
+// prepareApplyCustomPackages adds custom APT packages to the plan (merges with existing)
+func prepareApplyCustomPackages(plan *detector.Plan, packages []string) {
+	if plan.Metadata == nil {
+		plan.Metadata = make(map[string]interface{})
+	}
+
+	// Start with existing custom packages from plan file
+	var customPackages []string
+	if existing, ok := plan.Metadata["custom_packages"].([]interface{}); ok {
+		for _, pkg := range existing {
+			if s, ok := pkg.(string); ok {
+				customPackages = append(customPackages, s)
+			}
+		}
+	} else if existing, ok := plan.Metadata["custom_packages"].([]string); ok {
+		customPackages = append(customPackages, existing...)
+	}
+
+	// Add CLI packages
+	if len(packages) > 0 {
+		customPackages = append(customPackages, packages...)
+	}
+
+	// Add environment variable packages (comma-separated)
+	if env := os.Getenv("COOLPACK_PACKAGES"); env != "" {
+		for _, pkg := range strings.Split(env, ",") {
+			pkg = strings.TrimSpace(pkg)
+			if pkg != "" {
+				customPackages = append(customPackages, pkg)
+			}
+		}
+	}
+
+	if len(customPackages) == 0 {
+		return
+	}
+
+	// Deduplicate
+	seen := make(map[string]bool)
+	unique := make([]string, 0, len(customPackages))
+	for _, pkg := range customPackages {
+		if !seen[pkg] {
+			seen[pkg] = true
+			unique = append(unique, pkg)
+		}
+	}
+
+	plan.Metadata["custom_packages"] = unique
+}
+
+// prepareLoadPlanFromFile loads a build plan from a JSON file
+func prepareLoadPlanFromFile(path string) (*app.Plan, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read file: %w", err)
+	}
+
+	var plan app.Plan
+	if err := json.Unmarshal(data, &plan); err != nil {
+		return nil, fmt.Errorf("failed to parse JSON: %w", err)
+	}
+
+	return &plan, nil
 }

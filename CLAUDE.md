@@ -13,7 +13,9 @@ A general purpose build pack for applications. Detects application type, generat
 ## Commands
 
 - `coolpack plan [path]` - Detect and output build plan
-- `coolpack plan [path] --json` - Output as JSON
+  - `--json` - Output as JSON
+  - `-o, --out` - Write plan to file (e.g., `coolpack.json`)
+  - `--packages` - Additional APT packages to install (e.g., `curl`, `wget`)
 - `coolpack prepare [path]` - Generate Dockerfile in `.coolpack/` directory
   - `-i, --install-cmd` - Override install command
   - `-b, --build-cmd` - Override build command
@@ -23,6 +25,7 @@ A general purpose build pack for applications. Detects application type, generat
   - `--spa` - Enable SPA mode (serves index.html for all routes)
   - `--no-spa` - Disable SPA mode (overrides auto-detection)
   - `--build-env` - Build-time environment variables (KEY=value or KEY to pull from current env)
+  - `--packages` - Additional APT packages to install (e.g., `curl`, `wget`)
 - `coolpack build [path]` - Build container image
   - `-n, --name` - Image name (defaults to directory name)
   - `-t, --tag` - Image tag (default "latest")
@@ -35,6 +38,7 @@ A general purpose build pack for applications. Detects application type, generat
   - `--spa` - Enable SPA mode (serves index.html for all routes)
   - `--no-spa` - Disable SPA mode (overrides auto-detection)
   - `--build-env` - Build-time environment variables (KEY=value or KEY to pull from current env)
+  - `--packages` - Additional APT packages to install (e.g., `curl`, `wget`)
 - `coolpack run [path]` - Run container (**DEVELOPMENT ONLY**)
   - `-n, --name` - Image name (defaults to directory name)
   - `-t, --tag` - Image tag (default "latest")
@@ -56,6 +60,7 @@ Coolpack behavior can be configured via environment variables:
 | `COOLPACK_SPA` | Enable SPA mode (serves index.html for all routes) | Auto-detected |
 | `COOLPACK_NO_SPA` | Disable SPA mode (overrides auto-detection) | `false` |
 | `COOLPACK_SPA_OUTPUT_DIR` | Override static output directory | Framework-specific |
+| `COOLPACK_PACKAGES` | Additional APT packages (comma-separated) | - |
 | `NODE_VERSION` | Alternative to `COOLPACK_NODE_VERSION` (legacy) | - |
 
 **Priority**: CLI flags > Environment variables > Auto-detected
@@ -83,6 +88,13 @@ COOLPACK_BASE_IMAGE=node:20 coolpack build
 
 # Force specific Node version
 COOLPACK_NODE_VERSION=18 coolpack build
+
+# Add custom APT packages (e.g., for ffmpeg, curl)
+coolpack build --packages ffmpeg --packages curl
+COOLPACK_PACKAGES=ffmpeg,curl coolpack build
+
+# Save build plan to file
+coolpack plan --out coolpack.json
 ```
 
 ## Detection
@@ -369,10 +381,14 @@ Releases are automated via GitHub Actions with native builds (CGO enabled for tr
 1. Create a new release on GitHub with a tag (e.g., `v1.0.0`)
 2. GitHub Actions will automatically build binaries for:
    - Linux (amd64, arm64)
-   - macOS (amd64, arm64)
-   - Windows (amd64)
+   - macOS (arm64)
 3. Binaries are attached to the release with checksums
 4. Version file (`pkg/version/version.go`) is updated automatically
+
+**Installation:**
+```bash
+curl -fsSL https://raw.githubusercontent.com/coollabsio/coolpack/main/install.sh | bash
+```
 
 **Files:**
 - `.github/workflows/release.yml` - GitHub Actions workflow

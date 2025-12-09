@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 
 	"github.com/coollabsio/coolpack/pkg/detector"
 	"github.com/spf13/cobra"
@@ -14,6 +15,8 @@ import (
 var (
 	planOutputJSON bool
 	planPath       string
+	planOutFile    string
+	planPackages   []string
 )
 
 var planCmd = &cobra.Command{
@@ -32,6 +35,9 @@ Environment Variables:
 func init() {
 	planCmd.Flags().BoolVar(&planOutputJSON, "json", false, "Output plan as JSON")
 	planCmd.Flags().StringVarP(&planPath, "path", "p", "", "Path to the application (defaults to current directory)")
+	planCmd.Flags().StringVarP(&planOutFile, "out", "o", "", "Write plan to file (default: coolpack.json if flag used without value)")
+	planCmd.Flags().Lookup("out").NoOptDefVal = "coolpack.json"
+	planCmd.Flags().StringArrayVar(&planPackages, "packages", nil, "Additional APT packages to install (e.g., curl, wget)")
 }
 
 func runPlan(cmd *cobra.Command, args []string) error {
@@ -67,6 +73,30 @@ func runPlan(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
+	// Apply custom packages (CLI > env > detected)
+	applyCustomPackages(plan, planPackages)
+
+	// Write to file if --out is specified
+	if planOutFile != "" {
+		outPath := planOutFile
+		if !filepath.IsAbs(outPath) {
+			outPath = filepath.Join(absPath, outPath)
+		}
+		file, err := os.Create(outPath)
+		if err != nil {
+			return fmt.Errorf("failed to create output file: %w", err)
+		}
+		defer file.Close()
+
+		enc := json.NewEncoder(file)
+		enc.SetIndent("", "  ")
+		if err := enc.Encode(plan); err != nil {
+			return fmt.Errorf("failed to write plan: %w", err)
+		}
+		fmt.Printf("Plan written to %s\n", outPath)
+		return nil
+	}
+
 	// Output the plan
 	if planOutputJSON {
 		enc := json.NewEncoder(os.Stdout)
@@ -77,6 +107,47 @@ func runPlan(cmd *cobra.Command, args []string) error {
 	// Pretty print the plan
 	printPlan(plan)
 	return nil
+}
+
+// applyCustomPackages adds custom APT packages to the plan
+func applyCustomPackages(plan *detector.Plan, packages []string) {
+	if plan.Metadata == nil {
+		plan.Metadata = make(map[string]interface{})
+	}
+
+	// Collect packages from CLI and env
+	var customPackages []string
+
+	// CLI packages
+	if len(packages) > 0 {
+		customPackages = append(customPackages, packages...)
+	}
+
+	// Environment variable (comma-separated)
+	if env := os.Getenv("COOLPACK_PACKAGES"); env != "" {
+		for _, pkg := range strings.Split(env, ",") {
+			pkg = strings.TrimSpace(pkg)
+			if pkg != "" {
+				customPackages = append(customPackages, pkg)
+			}
+		}
+	}
+
+	if len(customPackages) == 0 {
+		return
+	}
+
+	// Deduplicate
+	seen := make(map[string]bool)
+	unique := make([]string, 0, len(customPackages))
+	for _, pkg := range customPackages {
+		if !seen[pkg] {
+			seen[pkg] = true
+			unique = append(unique, pkg)
+		}
+	}
+
+	plan.Metadata["custom_packages"] = unique
 }
 
 func printPlan(plan *detector.Plan) {

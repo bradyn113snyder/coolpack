@@ -507,25 +507,44 @@ func (g *Generator) getSortedEnvKeys(env map[string]string) []string {
 	return keys
 }
 
-// writeAptInstall writes APT package installation for native dependencies
+// writeAptInstall writes APT package installation for native and custom packages
 func (g *Generator) writeAptInstall(sb *strings.Builder) {
-	aptPackages, ok := g.plan.Metadata["apt_packages"].([]string)
-	if !ok || len(aptPackages) == 0 {
+	// Collect all packages: native (apt_packages) + custom (custom_packages)
+	var allPackages []string
+
+	if aptPackages, ok := g.plan.Metadata["apt_packages"].([]string); ok {
+		allPackages = append(allPackages, aptPackages...)
+	}
+
+	if customPackages, ok := g.plan.Metadata["custom_packages"].([]string); ok {
+		allPackages = append(allPackages, customPackages...)
+	}
+
+	if len(allPackages) == 0 {
 		return
 	}
 
+	// Deduplicate
+	seen := make(map[string]bool)
+	unique := make([]string, 0, len(allPackages))
+	for _, pkg := range allPackages {
+		if !seen[pkg] {
+			seen[pkg] = true
+			unique = append(unique, pkg)
+		}
+	}
+
 	// Add comment about what packages are being installed
-	if nativePkgs, ok := g.plan.Metadata["native_packages"].([]string); ok {
+	if nativePkgs, ok := g.plan.Metadata["native_packages"].([]string); ok && len(nativePkgs) > 0 {
 		sb.WriteString(fmt.Sprintf("# Native dependencies detected: %s\n", strings.Join(nativePkgs, ", ")))
+	}
+	if customPkgs, ok := g.plan.Metadata["custom_packages"].([]string); ok && len(customPkgs) > 0 {
+		sb.WriteString(fmt.Sprintf("# Custom packages: %s\n", strings.Join(customPkgs, ", ")))
 	}
 
 	sb.WriteString("RUN apt-get update && apt-get install -y --no-install-recommends \\\n")
-	for i, pkg := range aptPackages {
-		if i == len(aptPackages)-1 {
-			sb.WriteString(fmt.Sprintf("    %s \\\n", pkg))
-		} else {
-			sb.WriteString(fmt.Sprintf("    %s \\\n", pkg))
-		}
+	for _, pkg := range unique {
+		sb.WriteString(fmt.Sprintf("    %s \\\n", pkg))
 	}
 	sb.WriteString("    && rm -rf /var/lib/apt/lists/*\n\n")
 }
