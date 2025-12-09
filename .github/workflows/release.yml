@@ -21,11 +21,7 @@ jobs:
             goos: linux
             goarch: arm64
             cc: gcc
-          # macOS builds (both on ARM runner with cross-compile for amd64)
-          - os: macos-latest
-            goos: darwin
-            goarch: amd64
-            cc: clang
+          # macOS build (ARM only)
           - os: macos-latest
             goos: darwin
             goarch: arm64
