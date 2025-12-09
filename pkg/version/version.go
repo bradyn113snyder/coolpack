@@ -10,7 +10,7 @@ import (
 
 // Version is set by goreleaser or build script via ldflags
 var (
-	Version = "v0.0.0"
+	Version = "v0.0.1"
 	Commit  = "none"
 	Date    = "unknown"
 )
