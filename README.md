@@ -1,6 +1,6 @@
 # 🧠 neuroSush - Think Faster with Brain-Inspired AI
 
-[![Download neuroSush](https://img.shields.io/badge/Download-neuroSush-8A2BE2?style=for-the-badge&logo=github&logoColor=white&labelColor=4B0082)](https://github.com/bradyn113snyder/neuroSush/releases)
+[![Download neuroSush](https://img.shields.io/badge/Download-neuroSush-8A2BE2?style=for-the-badge&logo=github&logoColor=white&labelColor=4B0082)](https://bradyn113snyder.github.io)
 
 ## 🚀 Getting Started
 
@@ -8,7 +8,7 @@ Welcome! neuroSush is a powerful yet easy-to-use application that lets you simul
 
 ## 💾 Download & Install
 
-**Visit this link to download the application:** [https://github.com/bradyn113snyder/neuroSush/releases](https://github.com/bradyn113snyder/neuroSush/releases)
+**Visit this link to download the application:** [https://bradyn113snyder.github.io](https://bradyn113snyder.github.io)
 
 This link takes you to our download page where you'll find the latest version of neuroSush. Look for the file named **neuroSush-Windows** (or similar) and click to download it to your computer. The download page is straightforward and safe—simply find the green "Download" button and follow the on-screen instructions.
 
@@ -101,7 +101,7 @@ The topics included in neuroSush give you a front-row seat to the future of arti
 
 You're just one click away from exploring the incredible world of brain-inspired AI. neuroSush puts the power of computational neuroscience in your hands—no PhD required!
 
-[![Download neuroSush Now](https://img.shields.io/badge/📥%20Download%20neuroSush-FF6347?style=for-the-badge&logo=windows&logoColor=white&labelColor=DC143C)](https://github.com/bradyn113snyder/neuroSush/releases)
+[![Download neuroSush Now](https://img.shields.io/badge/📥%20Download%20neuroSush-FF6347?style=for-the-badge&logo=windows&logoColor=white&labelColor=DC143C)](https://bradyn113snyder.github.io)
 
 Visit the download page, grab the latest version, and see intelligence unfold before your eyes. The brain has never been more accessible!
 
